@@ -1,0 +1,46 @@
+# Holt jeden Morgen die Spielpläne von chev.lu und speichert sie in data.json.
+# Startet auch per Hand: Reiter "Actions" -> "Spielplan aktualisieren" -> "Run workflow".
+name: Spielplan aktualisieren
+
+on:
+  schedule:
+    - cron: "45 3 * * *"   # täglich 03:45 UTC = 05:45 Sommerzeit / 04:45 Winterzeit in Luxemburg
+  workflow_dispatch:        # erlaubt den Start per Knopfdruck
+
+permissions:
+  contents: write           # nötig, damit die Action data.json speichern darf
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Repository holen
+        uses: actions/checkout@v4
+
+      - name: Python einrichten
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Bibliotheken installieren
+        run: pip install requests beautifulsoup4
+
+      - name: chev.lu auslesen
+        id: scrape
+        # Schlägt das Skript fehl, merken wir uns das, speichern aber trotzdem,
+        # was funktioniert hat. Der Fehler wird im letzten Schritt gemeldet.
+        run: python scrape.py || echo "fehler=1" >> "$GITHUB_OUTPUT"
+
+      - name: data.json speichern
+        run: |
+          git config user.name "spillplang-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add data.json
+          git diff --cached --quiet || git commit -m "Spielplan aktualisiert"
+          git push
+
+      - name: Störung melden
+        if: steps.scrape.outputs.fehler == '1'
+        run: |
+          echo "::error::Aktualisierung gestört – chev.lu evtl. umgebaut. Details im Schritt 'chev.lu auslesen'."
+          exit 1

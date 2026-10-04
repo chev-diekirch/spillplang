@@ -1,0 +1,181 @@
+"""
+Liest die Spielpläne aller CHEV-Mannschaften von chev.lu und schreibt sie in data.json.
+
+Ablauf:
+1. Jede Team-Seite (z. B. https://chev.lu/match/hommes-1/) herunterladen.
+2. Die Tabelle mit den Spielen suchen und Zeile für Zeile auslesen.
+3. Die Werte vereinheitlichen (z. B. "20H15" -> "20:15", "CHEV 1" -> "CHEV").
+4. Prüfen, ob die Seite noch so aussieht wie erwartet (Störungsprüfung).
+5. Alles in data.json speichern. Die WebApp (index.html) liest diese Datei.
+
+Gibt es eine Störung, behält das betroffene Team seine alten Daten,
+und das Skript endet mit Fehlercode 1. Dadurch schlägt der GitHub-Lauf fehl
+und GitHub schickt eine E-Mail.
+"""
+
+import json          # zum Lesen/Schreiben von data.json
+import re            # "reguläre Ausdrücke": Muster in Texten erkennen
+import sys           # für sys.exit (Fehlercode zurückgeben)
+from datetime import datetime
+from zoneinfo import ZoneInfo
+
+import requests                  # lädt Webseiten herunter
+from bs4 import BeautifulSoup    # zerlegt HTML, damit wir die Tabelle finden
+
+BASIS = "https://chev.lu/match/"
+
+# Kürzel in der App  ->  Adresse der Team-Seite auf chev.lu
+TEAMS = {
+    "h1": "hommes-1/",
+    "d1": "dames-1/",
+    "h2": "hommes-2/",
+    "d2": "dames-2/",
+    "u17g": "u17-garcons/",
+    "u17f": "u17-filles/",
+    "u15g": "u15-garcons/",
+    "u13g": "u13-garcons/",
+    "u13m": "u13-mixtes",
+    "u11": "u11-mixtes/",
+    "u9": "u9-mixtes/",
+    "u7": "u7-mixtes-wibbelgrupp/",
+}
+TURNIER_TEAMS = {"u11", "u9"}   # spielen Turniere statt Einzelspielen
+OHNE_PLAN_OK = {"u7"}           # hat (bisher) keinen Spielplan, das ist normal
+
+# Muster für gültige Daten: "26.09.26" oder Wochenende "27-29.11.26"
+DATUM = re.compile(r"^\d{2}\.\d{2}\.\d{2}$")
+DATUM_SPANNE = re.compile(r"^\d{1,2}-\d{1,2}\.\d{2}\.\d{2}$")
+
+
+def text(zelle):
+    """Sichtbarer Text einer Tabellenzelle, ohne doppelte Leerzeichen."""
+    return " ".join(zelle.get_text(" ").split())
+
+
+def zeit_umwandeln(z):
+    """'20H15' -> '20:15'. Alles andere (leer, '—') wird zu ''."""
+    m = re.match(r"^(\d{1,2})\s*[Hh:]\s*(\d{2})$", z)
+    return f"{int(m.group(1)):02d}:{m.group(2)}" if m else ""
+
+
+def eigenes_team(name):
+    """'CHEV', 'CHEV 1', 'CHEV U17 Garçons' ... -> 'CHEV'. Gegner bleiben unverändert."""
+    return "CHEV" if name.upper().startswith("CHEV") else name
+
+
+def tabelle_lesen(html):
+    """
+    Sucht die Spieltabelle und gibt ihre Zeilen als Listen von Texten zurück.
+    Erkennt die Tabelle an den Spaltenköpfen DATE und HEURE.
+    Rückgabe: (spalten_index, zeilen) oder (None, []) wenn keine Tabelle passt.
+    """
+    soup = BeautifulSoup(html, "html.parser")
+    for tabelle in soup.find_all("table"):
+        zeilen = tabelle.find_all("tr")
+        if not zeilen:
+            continue
+        kopf = [text(z).upper() for z in zeilen[0].find_all(["th", "td"])]
+        if "DATE" not in kopf or "HEURE" not in kopf:
+            continue
+        # Position jeder Spalte merken (falls die Reihenfolge sich mal ändert)
+        idx = {
+            "nr": 0,
+            "datum": kopf.index("DATE"),
+            "zeit": kopf.index("HEURE"),
+            "heim": kopf.index("LOCAL") if "LOCAL" in kopf else None,
+            "gast": kopf.index("VISITEUR") if "VISITEUR" in kopf else None,
+        }
+        daten = []
+        for tr in zeilen[1:]:
+            zellen = [text(td) for td in tr.find_all(["td", "th"])]
+            if any(zellen):          # leere Trennzeilen überspringen
+                daten.append(zellen)
+        return idx, daten
+    return None, []
+
+
+def team_auswerten(team, html):
+    """
+    Wandelt eine Team-Seite in Zeilen für data.json um:
+    [team, nr, datum, zeit, heim, gast]
+    Gibt (zeilen, probleme) zurück. probleme ist eine Liste mit Texten.
+    """
+    idx, daten = tabelle_lesen(html)
+    if idx is None:
+        return [], ["keine Spieltabelle gefunden"]
+    if idx["heim"] is None or idx["gast"] is None:
+        return [], ["Spalten LOCAL/VISITEUR fehlen"]
+
+    ergebnis, probleme = [], []
+    for nummer, z in enumerate(daten, start=1):
+        def feld(name):
+            i = idx[name]
+            return z[i] if i is not None and i < len(z) else ""
+
+        nr, datum, zeit = feld("nr"), feld("datum"), feld("zeit")
+        heim, gast = feld("heim"), feld("gast")
+
+        # Verlegte Spiele: auf chev.lu steht dann "remis" statt Datum
+        if "remis" in " ".join(z).lower():
+            datum, zeit = "", ""
+        elif not (DATUM.match(datum) or DATUM_SPANNE.match(datum)):
+            probleme.append(f"unbekanntes Datum '{datum}' in Zeile {nummer}")
+            continue
+
+        if team in TURNIER_TEAMS:
+            # Turnier: Ort steht in der Heim-Spalte, evtl. als "Tournoi U9 Mixtes à Diekirch"
+            ort = heim.split(" à ")[-1] if " à " in heim else heim
+            ort = "" if ort in ("—", "-") else ort
+            ergebnis.append([team, nr or f"Tournoi {nummer}", datum, zeit_umwandeln(zeit), "T", ort])
+        else:
+            heim, gast = eigenes_team(heim), eigenes_team(gast)
+            if "CHEV" not in (heim, gast):
+                probleme.append(f"kein CHEV-Team in Zeile {nummer} ({heim} - {gast})")
+                continue
+            ergebnis.append([team, nr, datum, zeit_umwandeln(zeit), heim, gast])
+
+    if not ergebnis and team not in OHNE_PLAN_OK:
+        probleme.append("keine Termine gefunden")
+    return ergebnis, probleme
+
+
+def main():
+    # Bisherige Daten laden, damit gestörte Teams ihre alten Termine behalten
+    try:
+        with open("data.json", encoding="utf-8") as f:
+            alt = json.load(f)
+    except FileNotFoundError:
+        alt = {"spiele": []}
+
+    neue_zeilen, fehler = [], []
+    for team, pfad in TEAMS.items():
+        alte_team_zeilen = [z for z in alt["spiele"] if z[0] == team]
+        try:
+            antwort = requests.get(BASIS + pfad, timeout=30,
+                                   headers={"User-Agent": "CHEV-Spillplang (github.com/chev-diekirch/spillplang)"})
+            antwort.raise_for_status()   # Fehler wie 404 werden hier zur Ausnahme
+            zeilen, probleme = team_auswerten(team, antwort.text)
+        except requests.RequestException as e:
+            zeilen, probleme = [], [f"Seite nicht erreichbar: {e}"]
+
+        if probleme:
+            fehler.append(f"{team}: " + "; ".join(probleme))
+            neue_zeilen += alte_team_zeilen       # alte Daten behalten
+        else:
+            neue_zeilen += zeilen
+        print(f"{team:5} {len(zeilen):3} Termine  {'FEHLER: ' + '; '.join(probleme) if probleme else 'ok'}")
+
+    jetzt = datetime.now(ZoneInfo("Europe/Luxembourg")).strftime("%Y-%m-%dT%H:%M")
+    with open("data.json", "w", encoding="utf-8") as f:
+        json.dump({"stand": jetzt, "fehler": fehler, "spiele": neue_zeilen},
+                  f, ensure_ascii=False, indent=1)
+
+    if fehler:
+        print("\nSTÖRUNG – chev.lu evtl. umgebaut. Betroffen:")
+        for f_ in fehler:
+            print(" -", f_)
+        sys.exit(1)   # lässt den GitHub-Lauf fehlschlagen -> E-Mail
+
+
+if __name__ == "__main__":
+    main()
