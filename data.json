@@ -1,10 +1,6 @@
 {
- "stand": "2026-10-04T15:41",
- "fehler": [
-  "u11: Spalten LOCAL/VISITEUR fehlen",
-  "u9: Spalten LOCAL/VISITEUR fehlen",
-  "u7: keine Spieltabelle gefunden"
- ],
+ "stand": "2026-10-04T15:43",
+ "fehler": [],
  "spiele": [
   [
    "h1",
@@ -848,7 +844,7 @@
   ],
   [
    "u9",
-   "Tournoi 5",
+   "Tournoi FLH",
    "13.12.26",
    "",
    "T",
@@ -856,7 +852,7 @@
   ],
   [
    "u9",
-   "Tournoi 6",
+   "Tournoi 5",
    "10.01.27",
    "",
    "T",
@@ -864,7 +860,7 @@
   ],
   [
    "u9",
-   "Tournoi 7",
+   "Tournoi 6",
    "24.01.27",
    "",
    "T",
@@ -872,7 +868,7 @@
   ],
   [
    "u9",
-   "Tournoi 8",
+   "Tournoi 7",
    "21.02.27",
    "",
    "T",
@@ -880,7 +876,7 @@
   ],
   [
    "u9",
-   "Tournoi 9",
+   "Tournoi 8",
    "21.03.27",
    "",
    "T",
@@ -888,7 +884,7 @@
   ],
   [
    "u9",
-   "Tournoi 10",
+   "Tournoi 9",
    "18.04.27",
    "",
    "T",
@@ -896,7 +892,7 @@
   ],
   [
    "u9",
-   "Tournoi 11",
+   "Tournoi 10",
    "02.05.27",
    "",
    "T",
@@ -904,7 +900,7 @@
   ],
   [
    "u9",
-   "Tournoi 12",
+   "Tournoi 11",
    "16.05.27",
    "",
    "T",
@@ -912,7 +908,7 @@
   ],
   [
    "u9",
-   "Tournoi 13",
+   "Tournoi 12",
    "06.06.27",
    "",
    "T",
