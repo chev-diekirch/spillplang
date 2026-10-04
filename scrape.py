@@ -84,6 +84,7 @@ def tabelle_lesen(html):
             "zeit": kopf.index("HEURE"),
             "heim": kopf.index("LOCAL") if "LOCAL" in kopf else None,
             "gast": kopf.index("VISITEUR") if "VISITEUR" in kopf else None,
+            "kopf": kopf,
         }
         daten = []
         for tr in zeilen[1:]:
@@ -102,9 +103,14 @@ def team_auswerten(team, html):
     """
     idx, daten = tabelle_lesen(html)
     if idx is None:
+        if team in OHNE_PLAN_OK:
+            return [], []          # kein Spielplan veröffentlicht: kein Fehler
         return [], ["keine Spieltabelle gefunden"]
-    if idx["heim"] is None or idx["gast"] is None:
-        return [], ["Spalten LOCAL/VISITEUR fehlen"]
+    if team in TURNIER_TEAMS and idx["heim"] is None:
+        # Turnier-Tabellen haben keine Spalte LOCAL: der Ort steht direkt hinter HEURE
+        idx["heim"] = idx["zeit"] + 1
+    elif idx["heim"] is None or idx["gast"] is None:
+        return [], [f"Spalten LOCAL/VISITEUR fehlen (gefunden: {idx['kopf']})"]
 
     ergebnis, probleme = [], []
     for nummer, z in enumerate(daten, start=1):
@@ -113,6 +119,8 @@ def team_auswerten(team, html):
             return z[i] if i is not None and i < len(z) else ""
 
         nr, datum, zeit = feld("nr"), feld("datum"), feld("zeit")
+        if team in TURNIER_TEAMS and nummer == 1:
+            print(f"   {team} Spalten: {idx['kopf']} | erste Zeile: {z}")
         heim, gast = feld("heim"), feld("gast")
 
         # Verlegte Spiele: auf chev.lu steht dann "remis" statt Datum
