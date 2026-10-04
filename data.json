@@ -1,6 +1,10 @@
 {
- "stand": "2026-10-04T14:00",
- "fehler": [],
+ "stand": "2026-10-04T15:41",
+ "fehler": [
+  "u11: Spalten LOCAL/VISITEUR fehlen",
+  "u9: Spalten LOCAL/VISITEUR fehlen",
+  "u7: keine Spieltabelle gefunden"
+ ],
  "spiele": [
   [
    "h1",
@@ -407,7 +411,7 @@
    "9",
    "24.01.27",
    "13:00",
-   "HSG Kastellaun-Simmern",
+   "HSG Kasttelaun-Simmern",
    "CHEV"
   ],
   [
