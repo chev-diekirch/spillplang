@@ -39,6 +39,8 @@ Dann behält die betroffene Mannschaft ihre alten Termine, der Lauf wird **rot**
 | `data.json` | Alle Termine; wird automatisch überschrieben, nicht von Hand ändern |
 | `scrape.py` | Python-Skript, das chev.lu ausliest (ausführlich auf Deutsch kommentiert) |
 | `.github/workflows/update.yml` | Zeitplan und Schritte der täglichen Aktualisierung |
+| `apple-touch-icon.png`, `icon-192.png`, `icon-512.png`, `favicon.png` | CHEV-Logo als Icon für Homebildschirm (iPhone/Android) und Browser-Tab |
+| `manifest.webmanifest` | Name, Farbe und Icons, wenn die Seite auf dem Homebildschirm liegt |
 
 ### Aufbau von `data.json`
 ```json
