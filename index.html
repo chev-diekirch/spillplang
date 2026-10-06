@@ -79,6 +79,16 @@ h2.day small{font-family:var(--body);text-transform:none;letter-spacing:0;font-w
 .game:first-child{border-top:0}
 .game.is-home{box-shadow:inset 3px 0 0 var(--home)}
 .game.past .time,.game.past .info{opacity:.6}
+.standings{margin-top:18px}
+.standings summary{font-family:var(--display);font-weight:800;font-size:1rem;text-transform:uppercase;letter-spacing:.03em;color:var(--accent);cursor:pointer;padding-block:4px}
+.standings .scroll{overflow-x:auto;margin-top:8px;border:1px solid var(--line);border-radius:4px}
+.standings table{border-collapse:collapse;width:100%;font-size:.8rem;font-variant-numeric:tabular-nums}
+.standings th{background:var(--brand);color:var(--on-brand);font-weight:700;font-size:.72rem;text-transform:uppercase;letter-spacing:.04em;padding:7px 4px;text-align:center;white-space:nowrap}
+.standings td{padding:7px 4px;text-align:center;border-top:1px solid var(--line);white-space:nowrap}
+.standings td.name,.standings th.name{text-align:left}
+.standings tr:nth-child(even) td{background:var(--surface)}
+.standings td.pts{font-weight:800}
+.standings tr.chev td{font-weight:800;color:var(--accent);background:var(--accent-soft)}
 .res{font-family:var(--display);font-weight:800;font-size:.95rem;font-variant-numeric:tabular-nums;padding:3px 9px;border-radius:6px;white-space:nowrap;background:var(--away-soft);color:var(--muted)}
 .res.win{background:var(--win-soft);color:var(--win)}
 .res.loss{background:var(--loss-soft);color:var(--loss)}
@@ -159,6 +169,7 @@ footer{margin-top:28px;font-size:.78rem;color:var(--muted)}
         <button data-q="res">Resultate</button>
       </div>
     </div>
+    <div id="team-table"></div>
     <div class="seg" id="team-filter" role="group" aria-label="Heim oder auswärts"></div>
     <div id="team-body"></div>
   </section>
@@ -184,7 +195,18 @@ function parseDate(s){
   const x=d(2000+ +m[3],+m[2]-1,+m[1]);return {start:x,end:x,range:false};
 }
 let GAMES=[];
-let CHANGES={},RESULTS={};
+let CHANGES={},RESULTS={},TABLES={};
+// Spaltenköpfe von chev.lu (Französisch) auf Deutsch
+const KOPF={"M":"Sp.","G":"S","N":"U","P":"N","BUTS":"Tore","DIFF":"Diff.","PTS":"Pkt.","EQUIPES":"Mannschaft"};
+function renderTable(t){
+  const box=document.getElementById("team-table"),tb=TABLES[t];
+  if(!tb){box.innerHTML="";return;}
+  const ni=tb.kopf.findIndex(k=>k.toUpperCase()==="EQUIPES");
+  const head=tb.kopf.map((k,i)=>`<th${i===ni?' class="name"':""}>${esc(KOPF[k.toUpperCase()]||k)}</th>`).join("");
+  const pi=tb.kopf.findIndex(k=>k.toUpperCase()==="PTS");
+  const rows=tb.zeilen.map(z=>`<tr${/^chev/i.test(z[ni]||"")?' class="chev"':""}>${z.map((c,i)=>`<td${i===ni?' class="name"':i===pi?' class="pts"':""}>${esc(c.replace(/(\d)\s*-\s*(\d)/,"$1–$2"))}</td>`).join("")}</tr>`).join("");
+  box.innerHTML=`<details class="standings" open><summary>Tabelle</summary><div class="scroll"><table><thead><tr>${head}</tr></thead><tbody>${rows}</tbody></table></div></details>`;
+}
 const CHG_TAGE=14;   // so lange bleibt eine Änderung grün markiert
 function buildGames(rows){const seen={};return rows.map(([team,nr,date,time,home,away])=>{
   const dt=parseDate(date);
@@ -302,6 +324,7 @@ function setRange(q){
 document.querySelectorAll(".quick button").forEach(b=>b.onclick=()=>setRange(b.dataset.q));
 function renderTeam(){
   const t=sel.value;
+  renderTable(t);
   const f=from.value?new Date(from.value+"T00:00"):seasonStart;
   const e=to.value?new Date(to.value+"T00:00"):seasonEnd;
   let list=GAMES.filter(g=>g.team===t&&(g.postponed||(g.dt.end>=f&&g.dt.start<=e)));
@@ -335,7 +358,7 @@ function loadData(){
   reloadBtn.classList.add("busy");reloadBtn.disabled=true;
   // ?t=… umgeht den Zwischenspeicher von GitHub, damit immer die neueste data.json kommt
   return fetch("data.json?t="+Date.now(),{cache:"no-store"}).then(r=>{if(!r.ok)throw new Error(r.status);return r.json();}).then(data=>{
-    CHANGES=data.aenderungen||{};RESULTS=data.resultate||{};
+    CHANGES=data.aenderungen||{};RESULTS=data.resultate||{};TABLES=data.tabellen||{};
     GAMES=buildGames(data.spiele);
     const st=new Date(data.stand);
     standEl.textContent="Stand "+st.toLocaleDateString("de-DE")+" "+st.toLocaleTimeString("de-DE",{hour:"2-digit",minute:"2-digit"})+(data.fehler&&data.fehler.length?" (teilweise veraltet)":"");

@@ -224,6 +224,31 @@ def ergebnisse_lesen(html):
     return liste
 
 
+def tabellenstand_lesen(html):
+    """
+    Sucht die Tabelle mit dem Tabellenstand (Spaltenköpfe u. a. "Equipes" und "Pts").
+    Rückgabe: {"kopf": [...], "zeilen": [[...], ...]} oder None, wenn es keine gibt.
+    Die Werte werden so übernommen, wie sie auf chev.lu stehen.
+    """
+    soup = BeautifulSoup(html, "html.parser")
+    for tabelle in soup.find_all("table"):
+        trs = tabelle.find_all("tr")
+        if len(trs) < 2:
+            continue
+        kopf = [text(z) for z in trs[0].find_all(["th", "td"])]
+        if "EQUIPES" not in [k.upper() for k in kopf] or "PTS" not in [k.upper() for k in kopf]:
+            continue
+        zeilen = [[text(td) for td in tr.find_all(["td", "th"])] for tr in trs[1:]]
+        zeilen = [z for z in zeilen if any(z)]
+        # Erste Spalte (Platz) hat oft keinen Kopf: dann "#" davor setzen
+        if zeilen and len(zeilen[0]) == len(kopf) + 1:
+            kopf = ["#"] + kopf
+        elif kopf and not kopf[0]:
+            kopf[0] = "#"
+        return {"kopf": kopf, "zeilen": zeilen}
+    return None
+
+
 def aehnlich(a, b):
     """True, wenn zwei Mannschaftsnamen gleich oder fast gleich sind (Tippfehler)."""
     a, b = a.lower().strip(), b.lower().strip()
@@ -303,7 +328,8 @@ def main():
 
     # ---------- Ergebnisse ----------
     alte_resultate = alt.get("resultate", {})
-    resultate = {}
+    alte_tabellen = alt.get("tabellen", {})
+    resultate, tabellen = {}, {}
     for team, pfad in ERGEBNIS_SEITEN.items():
         bisher = {k: v for k, v in alte_resultate.items() if k.startswith(team + "|")}
         team_zeilen = [z for z in neue_zeilen if z[0] == team]
@@ -315,7 +341,17 @@ def main():
         except requests.RequestException as e:
             fehler.append(f"{team} Ergebnisse: Seite nicht erreichbar: {e}")
             resultate.update(bisher)
+            if team in alte_tabellen:
+                tabellen[team] = alte_tabellen[team]
             continue
+
+        # Tabellenstand (steht auf derselben Seite)
+        stand = tabellenstand_lesen(antwort.text)
+        if stand:
+            tabellen[team] = stand
+        elif team in alte_tabellen:
+            fehler.append(f"{team} Tabelle: Tabellenstand nicht mehr gefunden")
+            tabellen[team] = alte_tabellen[team]
         if not liste and bisher:
             # Gestern gab es Ergebnisse, heute keine einzige: Seite vermutlich umgebaut
             fehler.append(f"{team} Ergebnisse: keine Ergebnisse mehr gefunden")
@@ -328,7 +364,7 @@ def main():
 
     with open("data.json", "w", encoding="utf-8") as f:
         json.dump({"stand": jetzt, "fehler": fehler, "spiele": neue_zeilen,
-                   "aenderungen": aenderungen, "resultate": resultate},
+                   "aenderungen": aenderungen, "resultate": resultate, "tabellen": tabellen},
                   f, ensure_ascii=False, indent=1)
 
     if fehler:
