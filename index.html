@@ -50,6 +50,13 @@ body{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:14px
 .masthead h1{font-family:var(--display);font-weight:800;font-size:1.7rem;letter-spacing:.02em;text-transform:uppercase;margin:0;line-height:1.05;text-wrap:balance}
 .masthead p{margin:.2rem 0 0;color:var(--brand-muted);font-size:.8rem}
 .masthead a{color:var(--on-brand)}
+.masthead .txt{flex:1}
+.reload{flex:none;width:44px;height:44px;border-radius:50%;border:1.5px solid var(--brand-muted);background:transparent;color:var(--on-brand);cursor:pointer;display:grid;place-items:center;padding:0}
+.reload svg{width:22px;height:22px}
+.reload:hover{background:rgba(255,255,255,.12)}
+.reload.busy svg{animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){.reload.busy svg{animation:none;opacity:.5}}
 .wrap{max-width:640px;margin:0 auto;padding-inline:16px;padding-block:4px 40px}
 .tabs{display:flex;gap:4px;margin:18px 0 14px;background:var(--away-soft);padding:4px;border-radius:6px}
 .tabs button{flex:1;border:0;background:transparent;color:var(--muted);font:700 .8rem var(--body);text-transform:uppercase;letter-spacing:.06em;padding:10px 8px;border-radius:4px;cursor:pointer}
@@ -113,6 +120,9 @@ footer{margin-top:28px;font-size:.78rem;color:var(--muted)}
     <h1>Spillplang</h1>
     <p>Quelle <a href="https://chev.lu/programme/" target="_blank" rel="noopener">chev.lu</a> · <span id="stand">lädt …</span></p>
   </div>
+  <button class="reload" id="reload" type="button" aria-label="Aktualisieren" title="Aktualisieren">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 12a8 8 0 1 1-2.34-5.66"/><path d="M20 4v5h-5"/></svg>
+  </button>
 </div></header>
 <div class="wrap">
 
@@ -287,15 +297,28 @@ document.getElementById("tab-team").onclick=()=>show("team");
 if(location.hash==="#mannschaft") show("team");
 
 from.value=iso(today);to.value=iso(seasonEnd);
-fetch("data.json",{cache:"no-store"}).then(r=>{if(!r.ok)throw new Error(r.status);return r.json();}).then(data=>{
-  GAMES=buildGames(data.spiele);
-  const st=new Date(data.stand);
-  document.getElementById("stand").textContent="Stand "+st.toLocaleDateString("de-DE")+(data.fehler&&data.fehler.length?" (teilweise veraltet)":"");
-  renderWeekend();renderTeam();
-}).catch(()=>{
-  document.getElementById("stand").textContent="Daten nicht geladen";
-  document.getElementById("we-body").innerHTML='<div class="empty">Die Spieldaten konnten nicht geladen werden. Bitte Seite neu laden.</div>';
-});
+/* ---------- Daten laden / Aktualisieren ---------- */
+const standEl=document.getElementById("stand"),reloadBtn=document.getElementById("reload");
+const loadedDay=new Date().toDateString();
+function loadData(){
+  reloadBtn.classList.add("busy");reloadBtn.disabled=true;
+  // ?t=… umgeht den Zwischenspeicher von GitHub, damit immer die neueste data.json kommt
+  return fetch("data.json?t="+Date.now(),{cache:"no-store"}).then(r=>{if(!r.ok)throw new Error(r.status);return r.json();}).then(data=>{
+    GAMES=buildGames(data.spiele);
+    const st=new Date(data.stand);
+    standEl.textContent="Stand "+st.toLocaleDateString("de-DE")+" "+st.toLocaleTimeString("de-DE",{hour:"2-digit",minute:"2-digit"})+(data.fehler&&data.fehler.length?" (teilweise veraltet)":"");
+    renderWeekend();renderTeam();
+  }).catch(()=>{
+    standEl.textContent="Daten nicht geladen";
+    if(!GAMES.length) document.getElementById("we-body").innerHTML='<div class="empty">Die Spieldaten konnten nicht geladen werden. Tippe oben auf Aktualisieren.</div>';
+  }).finally(()=>{reloadBtn.classList.remove("busy");reloadBtn.disabled=false;});
+}
+// Neuer Tag seit dem Öffnen: ganze Seite neu laden, damit "heute" und das nächste Wochenende stimmen
+function refresh(){ if(new Date().toDateString()!==loadedDay) location.reload(); else loadData(); }
+reloadBtn.addEventListener("click",refresh);
+// App vom Homebildschirm wieder geöffnet: automatisch aktualisieren
+document.addEventListener("visibilitychange",()=>{ if(document.visibilityState==="visible") refresh(); });
+loadData();
 </script>
 
 </body>
