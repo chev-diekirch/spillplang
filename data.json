@@ -1,18 +1,6 @@
 {
- "stand": "2026-10-06T05:57",
- "fehler": [
-  "h1: keine Spieltabelle gefunden",
-  "d1: keine Spieltabelle gefunden",
-  "h2: keine Spieltabelle gefunden",
-  "d2: keine Spieltabelle gefunden",
-  "u17g: keine Spieltabelle gefunden",
-  "u17f: keine Spieltabelle gefunden",
-  "u15g: keine Spieltabelle gefunden",
-  "u13g: keine Spieltabelle gefunden",
-  "u13m: keine Spieltabelle gefunden",
-  "u11: keine Spieltabelle gefunden",
-  "u9: keine Spieltabelle gefunden"
- ],
+ "stand": "2026-10-06T13:44",
+ "fehler": [],
  "spiele": [
   [
    "h1",
@@ -73,10 +61,10 @@
   [
    "h1",
    "29101072",
-   "15.10.26",
-   "20:30",
-   "CHEV",
-   "Red Boys 1"
+   "17.10.26",
+   "20:15",
+   "Red Boys 1",
+   "CHEV"
   ],
   [
    "h1",
@@ -131,8 +119,8 @@
    "29101142",
    "19.12.26",
    "20:15",
-   "Red Boys 1",
-   "CHEV"
+   "CHEV",
+   "Red Boys 1"
   ],
   [
    "d1",
