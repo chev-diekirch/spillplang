@@ -147,6 +147,46 @@ def team_auswerten(team, html):
     return ergebnis, probleme
 
 
+def schluessel(zeilen):
+    """
+    Gibt jedem Spiel einen festen Namen, z. B. "h1|29101052" (Mannschaft|Spielnummer).
+    Darüber erkennen wir dasselbe Spiel am nächsten Tag wieder, auch wenn sich
+    Datum oder Uhrzeit geändert haben. Kommt eine Nummer doppelt vor, wird "#2" angehängt.
+    """
+    ergebnis, gesehen = {}, {}
+    for z in zeilen:
+        k = f"{z[0]}|{z[1]}"
+        gesehen[k] = gesehen.get(k, 0) + 1
+        if gesehen[k] > 1:
+            k += f"#{gesehen[k]}"
+        ergebnis[k] = z
+    return ergebnis
+
+
+def aenderungen_finden(alte_zeilen, neue_zeilen, bisher, jetzt):
+    """
+    Vergleicht die Termine einer Mannschaft von gestern (alte_zeilen) und heute (neue_zeilen).
+    Rückgabe: Wörterbuch Schlüssel -> {"am": Zeitpunkt, "vorher": [Datum, Zeit, Heim, Gast]}
+              bzw. {"am": Zeitpunkt, "neu": True} für Spiele, die neu dazugekommen sind.
+    'bisher' sind die früher gefundenen Änderungen; sie bleiben erhalten,
+    solange es das Spiel noch gibt.
+    """
+    alt, neu = schluessel(alte_zeilen), schluessel(neue_zeilen)
+    ergebnis = {}
+    for k, z in neu.items():
+        if k in alt and alt[k][2:6] != z[2:6]:
+            # Datum, Uhrzeit, Heim oder Gast anders als gestern
+            ergebnis[k] = {"am": jetzt, "vorher": alt[k][2:6]}
+            print(f"   geändert: {k}  {alt[k][2:6]} -> {z[2:6]}")
+        elif k not in alt and alt:
+            # Spiel gab es gestern noch nicht (nur wenn die Mannschaft schon Termine hatte)
+            ergebnis[k] = {"am": jetzt, "neu": True}
+            print(f"   neu: {k}  {z[2:6]}")
+        elif k in bisher:
+            ergebnis[k] = bisher[k]      # ältere Änderung weiter merken
+    return ergebnis
+
+
 def main():
     # Bisherige Daten laden, damit gestörte Teams ihre alten Termine behalten
     try:
@@ -155,7 +195,10 @@ def main():
     except FileNotFoundError:
         alt = {"spiele": []}
 
-    neue_zeilen, fehler = [], []
+    jetzt = datetime.now(ZoneInfo("Europe/Luxembourg")).strftime("%Y-%m-%dT%H:%M")
+    alte_aenderungen = alt.get("aenderungen", {})
+
+    neue_zeilen, fehler, aenderungen = [], [], {}
     for team, pfad in TEAMS.items():
         alte_team_zeilen = [z for z in alt["spiele"] if z[0] == team]
         try:
@@ -174,16 +217,19 @@ def main():
         except requests.RequestException as e:
             zeilen, probleme = [], [f"Seite nicht erreichbar: {e}"]
 
+        bisher = {k: v for k, v in alte_aenderungen.items() if k.startswith(team + "|")}
         if probleme:
             fehler.append(f"{team}: " + "; ".join(probleme))
             neue_zeilen += alte_team_zeilen       # alte Daten behalten
+            aenderungen.update(bisher)            # und auch die alten Änderungen
         else:
             neue_zeilen += zeilen
+            aenderungen.update(aenderungen_finden(alte_team_zeilen, zeilen, bisher, jetzt))
         print(f"{team:5} {len(zeilen):3} Termine  {'FEHLER: ' + '; '.join(probleme) if probleme else 'ok'}")
 
-    jetzt = datetime.now(ZoneInfo("Europe/Luxembourg")).strftime("%Y-%m-%dT%H:%M")
     with open("data.json", "w", encoding="utf-8") as f:
-        json.dump({"stand": jetzt, "fehler": fehler, "spiele": neue_zeilen},
+        json.dump({"stand": jetzt, "fehler": fehler, "spiele": neue_zeilen,
+                   "aenderungen": aenderungen},
                   f, ensure_ascii=False, indent=1)
 
     if fehler:

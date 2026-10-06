@@ -24,7 +24,7 @@ img{max-width:100%}
   --bg:#ffffff; --surface:#f7f8fa; --line:#d3d6dc; --fg:#1d2433; --muted:#5c6475;
   --brand:#395aa0; --on-brand:#ffffff; --brand-muted:#cdd8ef;
   --accent:#395aa0; --accent-soft:#e3e9f5; --home:#395aa0; --on-home:#ffffff; --crest:#fbcb13; --home-soft:#e3e9f5; --away-soft:#eceef2;
-  --cup:#ffff8c; --on-cup:#4a4300; --late:#e15242; --on-late:#ffffff;
+  --cup:#ffff8c; --on-cup:#4a4300; --late:#e15242; --on-late:#ffffff; --chg:#1a7f3c; --chg-soft:#e3f5e8;
   --warn:#9a5b00; --warn-soft:#fbefd9;
   --display:"Montserrat",system-ui,-apple-system,"Segoe UI",sans-serif;
   --body:"Montserrat",system-ui,-apple-system,"Segoe UI",sans-serif;
@@ -33,13 +33,13 @@ img{max-width:100%}
   --bg:#0e1525; --surface:#162038; --line:#2a3858; --fg:#e8edf6; --muted:#9ba7bd;
   --brand:#2f4c8a; --on-brand:#ffffff; --brand-muted:#b9c8e8;
   --accent:#93b0ea; --accent-soft:#1d2d50; --home:#5a7fd0; --on-home:#ffffff; --crest:#fbcb13; --home-soft:#1d2d50; --away-soft:#1c2842;
-  --cup:#57521a; --on-cup:#fff7a6; --late:#c9463a; --on-late:#ffffff;
+  --cup:#57521a; --on-cup:#fff7a6; --late:#c9463a; --on-late:#ffffff; --chg:#5cd68a; --chg-soft:#16351f;
   --warn:#f0b75c; --warn-soft:#3a2c12; color-scheme:dark}}
 :root[data-theme="dark"]{
   --bg:#0e1525; --surface:#162038; --line:#2a3858; --fg:#e8edf6; --muted:#9ba7bd;
   --brand:#2f4c8a; --on-brand:#ffffff; --brand-muted:#b9c8e8;
   --accent:#93b0ea; --accent-soft:#1d2d50; --home:#5a7fd0; --on-home:#ffffff; --crest:#fbcb13; --home-soft:#1d2d50; --away-soft:#1c2842;
-  --cup:#57521a; --on-cup:#fff7a6; --late:#c9463a; --on-late:#ffffff;
+  --cup:#57521a; --on-cup:#fff7a6; --late:#c9463a; --on-late:#ffffff; --chg:#5cd68a; --chg-soft:#16351f;
   --warn:#f0b75c; --warn-soft:#3a2c12; color-scheme:dark}
 body{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:14px;line-height:1.45}
 .masthead{background:var(--brand);color:var(--on-brand);border-bottom:4px solid var(--crest);padding-inline:16px;padding-block:14px}
@@ -84,6 +84,9 @@ h2.day small{font-family:var(--body);text-transform:none;letter-spacing:0;font-w
 .info{min-width:0}
 .team{font-weight:600}
 .opp{color:var(--muted);font-size:.9rem;overflow-wrap:anywhere}
+.game.chg .time{color:var(--chg)}
+.chgnote{color:var(--chg);font-size:.78rem;font-weight:600;margin-top:2px}
+.tag.chg{background:var(--chg-soft);color:var(--chg)}
 .tag{font-size:.72rem;font-weight:600;padding:3px 8px;border-radius:6px;white-space:nowrap;background:var(--away-soft);color:var(--muted)}
 .tag.home{background:var(--home);color:var(--on-home)}
 .tag.away{background:transparent;color:var(--muted);box-shadow:inset 0 0 0 1px var(--line)}
@@ -177,9 +180,14 @@ function parseDate(s){
   const x=d(2000+ +m[3],+m[2]-1,+m[1]);return {start:x,end:x,range:false};
 }
 let GAMES=[];
-function buildGames(rows){return rows.map(([team,nr,date,time,home,away])=>{
+let CHANGES={};
+const CHG_TAGE=14;   // so lange bleibt eine Änderung grün markiert
+function buildGames(rows){const seen={};return rows.map(([team,nr,date,time,home,away])=>{
   const dt=parseDate(date);
-  const g={team,nr,time,dt};
+  let key=team+"|"+nr;seen[key]=(seen[key]||0)+1;if(seen[key]>1)key+="#"+seen[key];
+  const g={team,nr,time,dt,key};
+  const c=CHANGES[key];
+  if(c&&(Date.now()-new Date(c.am))/DAY<=CHG_TAGE) g.change=c;
   if(home==="T"){g.kind="tournoi";g.where=away;g.isHome=away==="Diekirch";g.opp=away?("Turnier in "+away):"Turnier, Ort noch offen";}
   else{g.kind="match";g.isHome=home==="CHEV";g.opp=(g.isHome?"vs ":"@ ")+(g.isHome?away:home);}
   g.cup=/^coupe/i.test(nr);
@@ -205,14 +213,25 @@ function row(g,{showDate=false}={}){
       :`${g.time||"–"}<small>${fmtShort.format(g.dt.start)}</small>`;
   } else timeHtml=g.time||"offen";
   const tags=[];
+  let note="";
+  if(g.change){
+    const am=new Date(g.change.am).toLocaleDateString("de-DE",{day:"2-digit",month:"2-digit"});
+    if(g.change.neu){tags.push(`<span class="tag chg">Neu</span>`);note=`Neu seit ${am}`;}
+    else{
+      const [vd,vt]=g.change.vorher;
+      const vorher=vd?(vd+(vt?" "+vt:"")):"Termin offen";
+      tags.push(`<span class="tag chg">Geändert</span>`);
+      note=`Geändert am ${am} · vorher ${esc(vorher)}`;
+    }
+  }
   if(g.cup) tags.push(`<span class="tag cup">Coupe 1/8</span>`);
   if(g.postponed) tags.push(`<span class="tag late">Remis, Termin offen</span>`);
   else if(g.dt.range) tags.push(`<span class="tag warn">Tag offen</span>`);
   else if(!g.time) tags.push(`<span class="tag warn">Uhrzeit offen</span>`);
   tags.push(g.isHome?`<span class="tag home">${g.kind==="tournoi"?"in Diekirch":"Heim"}</span>`:`<span class="tag away">${g.kind==="tournoi"?"Turnier auswärts":"Auswärts"}</span>`);
-  return `<div class="game${g.isHome?" is-home":""}${past?" past":""}">
+  return `<div class="game${g.isHome?" is-home":""}${past?" past":""}${g.change?" chg":""}">
     <div class="time">${timeHtml}</div>
-    <div class="info"><div class="team">${esc(teamName[g.team])}</div><div class="opp">${esc(g.opp)}</div></div>
+    <div class="info"><div class="team">${esc(teamName[g.team])}</div><div class="opp">${esc(g.opp)}</div>${note?`<div class="chgnote">${note}</div>`:""}</div>
     <div class="tags">${tags.join("")}</div></div>`;
 }
 
@@ -304,6 +323,7 @@ function loadData(){
   reloadBtn.classList.add("busy");reloadBtn.disabled=true;
   // ?t=… umgeht den Zwischenspeicher von GitHub, damit immer die neueste data.json kommt
   return fetch("data.json?t="+Date.now(),{cache:"no-store"}).then(r=>{if(!r.ok)throw new Error(r.status);return r.json();}).then(data=>{
+    CHANGES=data.aenderungen||{};
     GAMES=buildGames(data.spiele);
     const st=new Date(data.stand);
     standEl.textContent="Stand "+st.toLocaleDateString("de-DE")+" "+st.toLocaleTimeString("de-DE",{hour:"2-digit",minute:"2-digit"})+(data.fehler&&data.fehler.length?" (teilweise veraltet)":"");

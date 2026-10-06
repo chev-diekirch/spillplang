@@ -8,6 +8,7 @@ Spielplan aller Mannschaften von CHEV Handball Diekirch auf einer Seite – läu
 - **Wochenende:** alle Spiele und Turniere des nächsten Wochenendes, nach Tag sortiert; mit ‹ › wochenweise vor- und zurückblättern. Spiele unter der Woche (z. B. Donnerstag) stehen darüber.
 - **Mannschaft:** eine Mannschaft über einen frei wählbaren Zeitraum (Schnellwahl: ab heute, nächste 30 Tage, ganze Saison), nach Monaten gruppiert.
 - **Heim / Auswärts:** Umschalter in beiden Ansichten, jeweils mit Anzahl.
+- **Geänderte Termine** stehen 14 Tage lang in Grün, mit dem Tag der Änderung und dem alten Termin. Neu dazugekommene Spiele sind mit „Neu“ markiert.
 - **Markierungen** wie auf chev.lu: Pokalspiele gelb, verlegte Spiele („remis“) rot. „Tag offen“ heißt, dass auf chev.lu nur das Wochenende feststeht.
 
 „Heim“ = CHEV ist Gastgeber, oder ein Turnier in Diekirch. Die Halle selbst steht nicht auf chev.lu.
@@ -49,13 +50,19 @@ Dann behält die betroffene Mannschaft ihre alten Termine, der Lauf wird **rot**
  "fehler": [],
  "spiele": [
   ["h1", "29101052", "08.10.26", "20:30", "CHEV", "Standard 1"]
- ]
+ ],
+ "aenderungen": {
+  "u15g|29151002": {"am": "2026-10-06T05:57", "vorher": ["10.10.26", "16:00", "Museldall", "CHEV"]},
+  "h2|29301207": {"am": "2026-10-05T05:57", "neu": true}
+ }
 }
 ```
 Jede Zeile in `spiele`: Mannschaft, Spielnummer, Datum, Uhrzeit, Heim, Gast. Besonderheiten:
 - Wochenende ohne festen Tag: Datum wie `27-29.11.26`
 - verlegtes Spiel: Datum und Uhrzeit leer
 - Turnier (U11, U9): Heim = `T`, Gast = Spielort
+
+In `aenderungen` merkt sich das Skript, welche Spiele sich gegenüber dem Vortag geändert haben. Ein Spiel wird dabei an Mannschaft und Spielnummer erkannt (`h1|29101052`). Wie lange die App eine Änderung grün zeigt, steht in `index.html` bei `CHG_TAGE`.
 
 ## Lokal testen
 ```bash
