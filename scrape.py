@@ -163,6 +163,14 @@ def main():
                                    headers={"User-Agent": "CHEV-Spillplang (github.com/chev-diekirch/spillplang)"})
             antwort.raise_for_status()   # Fehler wie 404 werden hier zur Ausnahme
             zeilen, probleme = team_auswerten(team, antwort.text)
+            if probleme:
+                # Zur Fehlersuche: zeigen, was chev.lu statt der Tabelle geschickt hat
+                seite = BeautifulSoup(antwort.text, "html.parser")
+                titel = seite.title.get_text(strip=True) if seite.title else "(kein Titel)"
+                anfang = " ".join(seite.get_text(" ").split())[:200]
+                print(f"   {team}: HTTP {antwort.status_code}, {len(antwort.text)} Zeichen, "
+                      f"Adresse {antwort.url}, Titel '{titel}'")
+                print(f"   {team}: Textanfang: {anfang}")
         except requests.RequestException as e:
             zeilen, probleme = [], [f"Seite nicht erreichbar: {e}"]
 
