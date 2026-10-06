@@ -8,13 +8,16 @@ Spielplan aller Mannschaften von CHEV Handball Diekirch auf einer Seite – läu
 - **Wochenende:** alle Spiele und Turniere des nächsten Wochenendes, nach Tag sortiert; mit ‹ › wochenweise vor- und zurückblättern. Spiele unter der Woche (z. B. Donnerstag) stehen darüber.
 - **Mannschaft:** eine Mannschaft über einen frei wählbaren Zeitraum (Schnellwahl: ab heute, nächste 30 Tage, ganze Saison), nach Monaten gruppiert.
 - **Heim / Auswärts:** Umschalter in beiden Ansichten, jeweils mit Anzahl.
+- **Resultate** gespielter Spiele, grün bei Sieg, rot bei Niederlage. In der Ansicht Mannschaft zeigt die Schnellwahl „Resultate“ alle bisherigen Spiele.
 - **Geänderte Termine** stehen 14 Tage lang in Grün, mit dem Tag der Änderung und dem alten Termin. Neu dazugekommene Spiele sind mit „Neu“ markiert.
 - **Markierungen** wie auf chev.lu: Pokalspiele gelb, verlegte Spiele („remis“) rot. „Tag offen“ heißt, dass auf chev.lu nur das Wochenende feststeht.
 
 „Heim“ = CHEV ist Gastgeber, oder ein Turnier in Diekirch. Die Halle selbst steht nicht auf chev.lu.
 
 ## Daten
-Quelle sind die Team-Seiten auf chev.lu (`https://chev.lu/match/<mannschaft>/`), z. B. [Hommes 1](https://chev.lu/match/hommes-1/). Es steht also nur drin, was der Verein dort veröffentlicht – aktuell meist die Hinrunde, U7 hat keinen Spielplan.
+Quelle sind die Team-Seiten auf chev.lu (`https://chev.lu/match/<mannschaft>/`), z. B. [Hommes 1](https://chev.lu/match/hommes-1/), und für die Resultate die Ergebnis-Seiten (`https://chev.lu/result/<mannschaft>/`).
+
+Die Ergebnis-Seiten haben kein Datum. Das Skript ordnet jedes Ergebnis deshalb dem frühesten passenden Spiel im Spielplan zu (gleiches Heim- und Gastteam, Pokal nur zu Pokal). Kleine Schreibfehler bei Gegnern werden dabei toleriert. Es steht also nur drin, was der Verein dort veröffentlicht – aktuell meist die Hinrunde, U7 hat keinen Spielplan.
 
 Ablauf:
 1. Die GitHub Action **Spielplan aktualisieren** startet jeden Morgen (05:45 Sommerzeit / 04:45 Winterzeit; GitHub startet oft ein paar Minuten später).
@@ -61,6 +64,8 @@ Jede Zeile in `spiele`: Mannschaft, Spielnummer, Datum, Uhrzeit, Heim, Gast. Bes
 - Wochenende ohne festen Tag: Datum wie `27-29.11.26`
 - verlegtes Spiel: Datum und Uhrzeit leer
 - Turnier (U11, U9): Heim = `T`, Gast = Spielort
+
+In `resultate` steht pro Spiel das Ergebnis wie auf chev.lu (Heim:Gast), z. B. `"h1|29101012": "35:19"`.
 
 In `aenderungen` merkt sich das Skript, welche Spiele sich gegenüber dem Vortag geändert haben. Ein Spiel wird dabei an Mannschaft und Spielnummer erkannt (`h1|29101052`). Wie lange die App eine Änderung grün zeigt, steht in `index.html` bei `CHG_TAGE`.
 

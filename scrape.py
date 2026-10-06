@@ -13,6 +13,7 @@ und das Skript endet mit Fehlercode 1. Dadurch schlägt der GitHub-Lauf fehl
 und GitHub schickt eine E-Mail.
 """
 
+import difflib       # vergleicht ähnliche Namen (z. B. Tippfehler bei Gegnern)
 import json          # zum Lesen/Schreiben von data.json
 import re            # "reguläre Ausdrücke": Muster in Texten erkennen
 import sys           # für sys.exit (Fehlercode zurückgeben)
@@ -41,6 +42,16 @@ TEAMS = {
 }
 TURNIER_TEAMS = {"u11", "u9"}   # spielen Turniere statt Einzelspielen
 OHNE_PLAN_OK = {"u7"}           # hat (bisher) keinen Spielplan, das ist normal
+
+# Ergebnisse: Kürzel -> Adresse der Ergebnis-Seite auf chev.lu (nur diese Teams haben eine)
+BASIS_ERGEBNIS = "https://chev.lu/result/"
+ERGEBNIS_SEITEN = {
+    "h1": "hommes-1/", "d1": "dames-1/", "h2": "hommes-2/", "d2": "dames-2/",
+    "u17g": "u17-garcons/", "u17f": "u17-filles/", "u15g": "u15-garcons/",
+    "u13g": "u13-garcons/", "u13m": "u13-mixtes/",
+}
+# Ergebnis wie "35 - 19" (auch mit Zusatz wie "(forfait)")
+ERGEBNIS = re.compile(r"^(\d{1,3})\s*[-:]\s*(\d{1,3})\b")
 
 # Muster für gültige Daten: "26.09.26" oder Wochenende "27-29.11.26"
 DATUM = re.compile(r"^\d{2}\.\d{2}\.\d{2}$")
@@ -187,6 +198,69 @@ def aenderungen_finden(alte_zeilen, neue_zeilen, bisher, jetzt):
     return ergebnis
 
 
+def ergebnisse_lesen(html):
+    """
+    Liest alle Ergebniszeilen einer Ergebnis-Seite.
+    Eine Zeile sieht so aus:  [Coupe 1/8 |] Heim | - | Gast | 35 - 19
+    Erkennungsmerkmal: eine Zelle nur mit "-" und danach eine Zelle mit Ergebnis.
+    (Die Tabellenstand-Tabelle hat keine "-"-Zelle und wird dadurch übersprungen.)
+    Rückgabe: Liste von (heim, gast, tore_heim, tore_gast, pokal_ja_nein)
+    """
+    soup = BeautifulSoup(html, "html.parser")
+    liste = []
+    for tr in soup.find_all("tr"):
+        zellen = [text(td) for td in tr.find_all(["td", "th"])]
+        if "-" not in zellen:
+            continue
+        d = zellen.index("-")
+        if d < 1 or d + 2 >= len(zellen):
+            continue
+        m = ERGEBNIS.match(zellen[d + 2])
+        if not m:
+            continue        # Spiel noch ohne Ergebnis
+        pokal = d >= 2 and "coupe" in zellen[d - 2].lower()
+        liste.append((eigenes_team(zellen[d - 1]), eigenes_team(zellen[d + 1]),
+                      int(m.group(1)), int(m.group(2)), pokal))
+    return liste
+
+
+def aehnlich(a, b):
+    """True, wenn zwei Mannschaftsnamen gleich oder fast gleich sind (Tippfehler)."""
+    a, b = a.lower().strip(), b.lower().strip()
+    return a == b or difflib.SequenceMatcher(None, a, b).ratio() >= 0.85
+
+
+def ergebnisse_zuordnen(team_zeilen, ergebnisse):
+    """
+    Ordnet jedes Ergebnis dem passenden Spiel im Spielplan zu.
+    Die Ergebnis-Seite hat kein Datum. Deshalb suchen wir das früheste noch freie Spiel
+    mit gleichem Heim- und Gastteam (Pokalspiele nur mit Pokalspielen).
+    Rückgabe: (Wörterbuch Schlüssel -> "35:19", Liste nicht zugeordneter Ergebnisse)
+    """
+    schl = schluessel(team_zeilen)
+    # Spiele in zeitlicher Reihenfolge (verlegte Spiele ohne Datum ans Ende)
+    def zeitpunkt(z):
+        if not DATUM.match(z[2]):
+            return (9999, 99, 99)
+        t, mo, j = z[2].split(".")
+        return (int(j), int(mo), int(t))
+    reihenfolge = sorted(schl.items(), key=lambda kv: zeitpunkt(kv[1]))
+    vergeben, zuordnung, offen = set(), {}, []
+    for heim, gast, th, tg, pokal in ergebnisse:
+        for k, z in reihenfolge:
+            if k in vergeben or z[4] == "T":
+                continue
+            if pokal != ("coupe" in z[1].lower()):
+                continue
+            if aehnlich(z[4], heim) and aehnlich(z[5], gast):
+                zuordnung[k] = f"{th}:{tg}"
+                vergeben.add(k)
+                break
+        else:
+            offen.append(f"{heim} - {gast} {th}:{tg}")
+    return zuordnung, offen
+
+
 def main():
     # Bisherige Daten laden, damit gestörte Teams ihre alten Termine behalten
     try:
@@ -227,9 +301,34 @@ def main():
             aenderungen.update(aenderungen_finden(alte_team_zeilen, zeilen, bisher, jetzt))
         print(f"{team:5} {len(zeilen):3} Termine  {'FEHLER: ' + '; '.join(probleme) if probleme else 'ok'}")
 
+    # ---------- Ergebnisse ----------
+    alte_resultate = alt.get("resultate", {})
+    resultate = {}
+    for team, pfad in ERGEBNIS_SEITEN.items():
+        bisher = {k: v for k, v in alte_resultate.items() if k.startswith(team + "|")}
+        team_zeilen = [z for z in neue_zeilen if z[0] == team]
+        try:
+            antwort = requests.get(BASIS_ERGEBNIS + pfad, timeout=30,
+                                   headers={"User-Agent": "CHEV-Spillplang (github.com/chev-diekirch/spillplang)"})
+            antwort.raise_for_status()
+            liste = ergebnisse_lesen(antwort.text)
+        except requests.RequestException as e:
+            fehler.append(f"{team} Ergebnisse: Seite nicht erreichbar: {e}")
+            resultate.update(bisher)
+            continue
+        if not liste and bisher:
+            # Gestern gab es Ergebnisse, heute keine einzige: Seite vermutlich umgebaut
+            fehler.append(f"{team} Ergebnisse: keine Ergebnisse mehr gefunden")
+            resultate.update(bisher)
+            continue
+        zuordnung, offen = ergebnisse_zuordnen(team_zeilen, liste)
+        resultate.update(zuordnung)
+        print(f"{team:5} {len(zuordnung):3} Ergebnisse zugeordnet"
+              + (f", nicht zugeordnet: {'; '.join(offen)}" if offen else ""))
+
     with open("data.json", "w", encoding="utf-8") as f:
         json.dump({"stand": jetzt, "fehler": fehler, "spiele": neue_zeilen,
-                   "aenderungen": aenderungen},
+                   "aenderungen": aenderungen, "resultate": resultate},
                   f, ensure_ascii=False, indent=1)
 
     if fehler:

@@ -24,7 +24,7 @@ img{max-width:100%}
   --bg:#ffffff; --surface:#f7f8fa; --line:#d3d6dc; --fg:#1d2433; --muted:#5c6475;
   --brand:#395aa0; --on-brand:#ffffff; --brand-muted:#cdd8ef;
   --accent:#395aa0; --accent-soft:#e3e9f5; --home:#395aa0; --on-home:#ffffff; --crest:#fbcb13; --home-soft:#e3e9f5; --away-soft:#eceef2;
-  --cup:#ffff8c; --on-cup:#4a4300; --late:#e15242; --on-late:#ffffff; --chg:#1a7f3c; --chg-soft:#e3f5e8;
+  --cup:#ffff8c; --on-cup:#4a4300; --late:#e15242; --on-late:#ffffff; --chg:#1a7f3c; --chg-soft:#e3f5e8; --win:#1a7f3c; --win-soft:#e3f5e8; --loss:#b3261e; --loss-soft:#fde4e1;
   --warn:#9a5b00; --warn-soft:#fbefd9;
   --display:"Montserrat",system-ui,-apple-system,"Segoe UI",sans-serif;
   --body:"Montserrat",system-ui,-apple-system,"Segoe UI",sans-serif;
@@ -33,13 +33,13 @@ img{max-width:100%}
   --bg:#0e1525; --surface:#162038; --line:#2a3858; --fg:#e8edf6; --muted:#9ba7bd;
   --brand:#2f4c8a; --on-brand:#ffffff; --brand-muted:#b9c8e8;
   --accent:#93b0ea; --accent-soft:#1d2d50; --home:#5a7fd0; --on-home:#ffffff; --crest:#fbcb13; --home-soft:#1d2d50; --away-soft:#1c2842;
-  --cup:#57521a; --on-cup:#fff7a6; --late:#c9463a; --on-late:#ffffff; --chg:#5cd68a; --chg-soft:#16351f;
+  --cup:#57521a; --on-cup:#fff7a6; --late:#c9463a; --on-late:#ffffff; --chg:#5cd68a; --chg-soft:#16351f; --win:#5cd68a; --win-soft:#16351f; --loss:#ff8a80; --loss-soft:#3d1714;
   --warn:#f0b75c; --warn-soft:#3a2c12; color-scheme:dark}}
 :root[data-theme="dark"]{
   --bg:#0e1525; --surface:#162038; --line:#2a3858; --fg:#e8edf6; --muted:#9ba7bd;
   --brand:#2f4c8a; --on-brand:#ffffff; --brand-muted:#b9c8e8;
   --accent:#93b0ea; --accent-soft:#1d2d50; --home:#5a7fd0; --on-home:#ffffff; --crest:#fbcb13; --home-soft:#1d2d50; --away-soft:#1c2842;
-  --cup:#57521a; --on-cup:#fff7a6; --late:#c9463a; --on-late:#ffffff; --chg:#5cd68a; --chg-soft:#16351f;
+  --cup:#57521a; --on-cup:#fff7a6; --late:#c9463a; --on-late:#ffffff; --chg:#5cd68a; --chg-soft:#16351f; --win:#5cd68a; --win-soft:#16351f; --loss:#ff8a80; --loss-soft:#3d1714;
   --warn:#f0b75c; --warn-soft:#3a2c12; color-scheme:dark}
 body{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:14px;line-height:1.45}
 .masthead{background:var(--brand);color:var(--on-brand);border-bottom:4px solid var(--crest);padding-inline:16px;padding-block:14px}
@@ -78,7 +78,10 @@ h2.day small{font-family:var(--body);text-transform:none;letter-spacing:0;font-w
 .game{display:grid;grid-template-columns:58px 1fr auto;gap:10px;align-items:center;padding:11px 12px;border-top:1px solid var(--line)}
 .game:first-child{border-top:0}
 .game.is-home{box-shadow:inset 3px 0 0 var(--home)}
-.game.past{opacity:.55}
+.game.past .time,.game.past .info{opacity:.6}
+.res{font-family:var(--display);font-weight:800;font-size:.95rem;font-variant-numeric:tabular-nums;padding:3px 9px;border-radius:6px;white-space:nowrap;background:var(--away-soft);color:var(--muted)}
+.res.win{background:var(--win-soft);color:var(--win)}
+.res.loss{background:var(--loss-soft);color:var(--loss)}
 .time{font-family:var(--display);font-weight:600;font-size:1.05rem;font-variant-numeric:tabular-nums}
 .time small{display:block;font-family:var(--body);font-size:.72rem;font-weight:500;color:var(--muted);line-height:1.1}
 .info{min-width:0}
@@ -153,6 +156,7 @@ footer{margin-top:28px;font-size:.78rem;color:var(--muted)}
         <button data-q="rest">Ab heute</button>
         <button data-q="30">Nächste 30 Tage</button>
         <button data-q="all">Ganze Saison</button>
+        <button data-q="res">Resultate</button>
       </div>
     </div>
     <div class="seg" id="team-filter" role="group" aria-label="Heim oder auswärts"></div>
@@ -180,12 +184,13 @@ function parseDate(s){
   const x=d(2000+ +m[3],+m[2]-1,+m[1]);return {start:x,end:x,range:false};
 }
 let GAMES=[];
-let CHANGES={};
+let CHANGES={},RESULTS={};
 const CHG_TAGE=14;   // so lange bleibt eine Änderung grün markiert
 function buildGames(rows){const seen={};return rows.map(([team,nr,date,time,home,away])=>{
   const dt=parseDate(date);
   let key=team+"|"+nr;seen[key]=(seen[key]||0)+1;if(seen[key]>1)key+="#"+seen[key];
   const g={team,nr,time,dt,key};
+  if(RESULTS[key]) g.result=RESULTS[key];
   const c=CHANGES[key];
   if(c&&(Date.now()-new Date(c.am))/DAY<=CHG_TAGE) g.change=c;
   if(home==="T"){g.kind="tournoi";g.where=away;g.isHome=away==="Diekirch";g.opp=away?("Turnier in "+away):"Turnier, Ort noch offen";}
@@ -228,6 +233,12 @@ function row(g,{showDate=false}={}){
   if(g.postponed) tags.push(`<span class="tag late">Remis, Termin offen</span>`);
   else if(g.dt.range) tags.push(`<span class="tag warn">Tag offen</span>`);
   else if(!g.time) tags.push(`<span class="tag warn">Uhrzeit offen</span>`);
+  if(g.result){
+    const [a,b]=g.result.split(":").map(Number);
+    const wir=g.isHome?a:b, sie=g.isHome?b:a;
+    const art=wir>sie?["win","Sieg"]:wir<sie?["loss","Niederlage"]:["","Unentschieden"];
+    tags.unshift(`<span class="res ${art[0]}" title="${art[1]}">${a}:${b}</span>`);
+  }
   tags.push(g.isHome?`<span class="tag home">${g.kind==="tournoi"?"in Diekirch":"Heim"}</span>`:`<span class="tag away">${g.kind==="tournoi"?"Turnier auswärts":"Auswärts"}</span>`);
   return `<div class="game${g.isHome?" is-home":""}${past?" past":""}${g.change?" chg":""}">
     <div class="time">${timeHtml}</div>
@@ -283,6 +294,7 @@ sel.innerHTML=TEAMS.map(([id,n])=>`<option value="${id}">${esc(n)}</option>`).jo
 const seasonStart=d(2026,8,1),seasonEnd=d(2027,6,30);
 function setRange(q){
   if(q==="all"){from.value=iso(seasonStart);to.value=iso(seasonEnd);}
+  else if(q==="res"){from.value=iso(seasonStart);to.value=iso(add(today,-1));}
   else if(q==="30"){from.value=iso(today);to.value=iso(add(today,30));}
   else{from.value=iso(today);to.value=iso(seasonEnd);}
   renderTeam();
@@ -323,7 +335,7 @@ function loadData(){
   reloadBtn.classList.add("busy");reloadBtn.disabled=true;
   // ?t=… umgeht den Zwischenspeicher von GitHub, damit immer die neueste data.json kommt
   return fetch("data.json?t="+Date.now(),{cache:"no-store"}).then(r=>{if(!r.ok)throw new Error(r.status);return r.json();}).then(data=>{
-    CHANGES=data.aenderungen||{};
+    CHANGES=data.aenderungen||{};RESULTS=data.resultate||{};
     GAMES=buildGames(data.spiele);
     const st=new Date(data.stand);
     standEl.textContent="Stand "+st.toLocaleDateString("de-DE")+" "+st.toLocaleTimeString("de-DE",{hour:"2-digit",minute:"2-digit"})+(data.fehler&&data.fehler.length?" (teilweise veraltet)":"");
