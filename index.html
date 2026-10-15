@@ -54,6 +54,17 @@ body{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:14px
 .reload{flex:none;width:44px;height:44px;border-radius:50%;border:1.5px solid var(--brand-muted);background:transparent;color:var(--on-brand);cursor:pointer;display:grid;place-items:center;padding:0}
 .reload svg{width:22px;height:22px}
 .reload:hover{background:rgba(255,255,255,.12)}
+.reload{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none;touch-action:manipulation}
+.reload.admin{border-color:var(--crest)}
+.admin-box{max-width:640px;margin:12px auto 0;padding-inline:16px}
+.admin-box .in{background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:14px;display:flex;flex-direction:column;gap:10px;font-size:.88rem}
+.admin-box h2{margin:0;font-size:1rem;color:var(--accent)}
+.admin-box p{margin:0;color:var(--muted)}
+.admin-box input{font:500 .95rem var(--body);color:var(--fg);background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:9px 10px;width:100%}
+.admin-box .row{display:flex;flex-wrap:wrap;gap:8px}
+.admin-box button{border:1px solid var(--line);background:var(--bg);color:var(--fg);font:600 .85rem var(--body);padding:8px 12px;border-radius:6px;cursor:pointer}
+.admin-box button.primary{background:var(--brand);border-color:var(--brand);color:var(--on-brand)}
+.admin-box .msg{font-weight:600;color:var(--accent)}
 .reload.busy svg{animation:spin .8s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
 @media (prefers-reduced-motion:reduce){.reload.busy svg{animation:none;opacity:.5}}
@@ -140,6 +151,20 @@ footer{margin-top:28px;font-size:.78rem;color:var(--muted)}
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 12a8 8 0 1 1-2.34-5.66"/><path d="M20 4v5h-5"/></svg>
   </button>
 </div></header>
+<div class="admin-box" id="admin-box" hidden>
+  <div class="in">
+    <h2>Aktualisieren von chev.lu</h2>
+    <p>Mit Schlüssel liest der ↻-Knopf chev.lu sofort neu aus (dauert ca. 2 Minuten). Der Schlüssel wird nur auf diesem Gerät gespeichert. Ohne Schlüssel lädt der Knopf nur die letzte Aktualisierung.</p>
+    <label for="admin-token">GitHub-Schlüssel (Fine-grained token, Actions: Read and write)</label>
+    <input id="admin-token" type="password" autocomplete="off" spellcheck="false" placeholder="github_pat_…">
+    <div class="row">
+      <button class="primary" id="admin-save" type="button">Speichern</button>
+      <button id="admin-del" type="button">Schlüssel entfernen</button>
+      <button id="admin-close" type="button">Schließen</button>
+    </div>
+    <p class="msg" id="admin-msg"></p>
+  </div>
+</div>
 <div class="wrap">
 
   <div class="tabs" role="tablist">
@@ -370,9 +395,77 @@ function loadData(){
 }
 // Neuer Tag seit dem Öffnen: ganze Seite neu laden, damit "heute" und das nächste Wochenende stimmen
 function refresh(){ if(new Date().toDateString()!==loadedDay) location.reload(); else loadData(); }
-reloadBtn.addEventListener("click",refresh);
+
+/* ---------- chev.lu sofort neu auslesen (nur mit Schlüssel auf diesem Gerät) ---------- */
+// Der Knopf startet dann die GitHub Action "Spielplan aktualisieren", wartet, bis sie fertig ist,
+// und lädt anschließend die neue data.json. Ohne Schlüssel: nur neu laden wie bisher.
+const REPO="chev-diekirch/spillplang", WORKFLOW="update.yml", KEY="spillplang-token";
+const ls={get(){try{return localStorage.getItem(KEY)||"";}catch(e){return "";}},
+          set(v){try{v?localStorage.setItem(KEY,v):localStorage.removeItem(KEY);return true;}catch(e){return false;}}};
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+let running=false;
+function markAdmin(){reloadBtn.classList.toggle("admin",!!ls.get());}
+async function gh(path,opt={}){
+  const r=await fetch("https://api.github.com/repos/"+REPO+path,{...opt,headers:{
+    "Accept":"application/vnd.github+json","Authorization":"Bearer "+ls.get(),"X-GitHub-Api-Version":"2022-11-28",...(opt.headers||{})}});
+  if(r.status===401||r.status===403||r.status===404) throw new Error("schluessel");
+  if(!r.ok) throw new Error("github "+r.status);
+  return r.status===204?null:r.json();
+}
+async function scrapeNow(){
+  if(running) return; running=true;
+  reloadBtn.classList.add("busy");reloadBtn.disabled=true;
+  const vorher=standEl.textContent, start=Date.now();
+  try{
+    standEl.textContent="chev.lu wird ausgelesen …";
+    await gh(`/actions/workflows/${WORKFLOW}/dispatches`,{method:"POST",body:JSON.stringify({ref:"main"})});
+    // 1) warten, bis der gestartete Lauf fertig ist (max. 4 Minuten)
+    let lauf=null;
+    while(Date.now()-start<240000){
+      await sleep(6000);
+      const d=await gh(`/actions/workflows/${WORKFLOW}/runs?event=workflow_dispatch&per_page=1`);
+      const r=d.workflow_runs&&d.workflow_runs[0];
+      if(r&&new Date(r.created_at).getTime()>=start-60000){lauf=r; if(r.status==="completed") break;}
+    }
+    if(!lauf||lauf.status!=="completed") throw new Error("zeit");
+    if(lauf.conclusion!=="success") standEl.textContent="Auslesen gestört – Details auf GitHub";
+    // 2) warten, bis GitHub Pages die neue data.json ausliefert (max. 3 Minuten)
+    standEl.textContent="Seite wird aktualisiert …";
+    const alt=await fetch("data.json?t="+Date.now(),{cache:"no-store"}).then(r=>r.json()).then(d=>d.stand).catch(()=>"");
+    let neu=alt;
+    while(neu===alt&&Date.now()-start<420000){
+      await sleep(8000);
+      neu=await fetch("data.json?t="+Date.now(),{cache:"no-store"}).then(r=>r.json()).then(d=>d.stand).catch(()=>alt);
+    }
+    running=false; await loadData();
+    if(neu===alt) standEl.textContent+=" (neue Daten noch nicht da, gleich nochmal ↻)";
+  }catch(e){
+    running=false;
+    standEl.textContent=e.message==="schluessel"?"Schlüssel ungültig – Knopf 2 Sek. gedrückt halten":
+                        e.message==="zeit"?"Dauert länger als üblich – später ↻ drücken":"Fehler beim Starten – später nochmal";
+    reloadBtn.classList.remove("busy");reloadBtn.disabled=false;
+    setTimeout(()=>{if(!running) standEl.textContent=vorher;},8000);
+  }
+}
+
+// Knopf: kurz tippen = aktualisieren; 2 Sekunden gedrückt halten = Schlüssel eingeben
+const box=document.getElementById("admin-box"),tok=document.getElementById("admin-token"),msg=document.getElementById("admin-msg");
+let haltTimer=null,gehalten=false;
+reloadBtn.addEventListener("pointerdown",()=>{gehalten=false;haltTimer=setTimeout(()=>{gehalten=true;box.hidden=false;tok.value="";msg.textContent=ls.get()?"Auf diesem Gerät ist ein Schlüssel gespeichert.":"";},2000);});
+["pointerup","pointerleave","pointercancel"].forEach(ev=>reloadBtn.addEventListener(ev,()=>clearTimeout(haltTimer)));
+reloadBtn.addEventListener("contextmenu",e=>e.preventDefault());
+reloadBtn.addEventListener("click",()=>{ if(gehalten){gehalten=false;return;} ls.get()?scrapeNow():refresh(); });
+document.getElementById("admin-save").onclick=()=>{
+  const v=tok.value.trim();
+  if(!/^(github_pat_|ghp_)/.test(v)){msg.textContent="Das sieht nicht wie ein GitHub-Schlüssel aus.";return;}
+  msg.textContent=ls.set(v)?"Gespeichert. Ab jetzt liest ↻ chev.lu neu aus.":"Speichern nicht möglich (privater Modus?).";
+  markAdmin();
+};
+document.getElementById("admin-del").onclick=()=>{ls.set("");markAdmin();msg.textContent="Schlüssel entfernt.";};
+document.getElementById("admin-close").onclick=()=>{box.hidden=true;};
+markAdmin();
 // App vom Homebildschirm wieder geöffnet: automatisch aktualisieren
-document.addEventListener("visibilitychange",()=>{ if(document.visibilityState==="visible") refresh(); });
+document.addEventListener("visibilitychange",()=>{ if(document.visibilityState==="visible"&&!running) refresh(); });
 loadData();
 </script>
 

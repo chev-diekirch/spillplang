@@ -28,6 +28,18 @@ Ablauf:
 
 Per Hand starten: **Actions → Spielplan aktualisieren → Run workflow**.
 
+### Aktualisieren direkt aus der App
+Der ↻-Knopf oben rechts lädt normalerweise nur die letzte Aktualisierung. Ist auf dem Gerät ein GitHub-Schlüssel gespeichert (Knopf mit gelbem Ring), liest er chev.lu sofort neu aus: Die App startet die Action, wartet bis sie fertig ist (ca. 2 Minuten) und zeigt dann die neuen Daten.
+
+Schlüssel einrichten:
+1. Auf GitHub (Konto `chev-diekirch`): **Settings → Developer settings → Personal access tokens → Fine-grained tokens → Generate new token**.
+2. *Repository access*: **Only select repositories** → `spillplang`.
+3. *Permissions → Repository permissions*: **Actions: Read and write**. Sonst nichts.
+4. Token erzeugen und kopieren (beginnt mit `github_pat_`).
+5. In der App den ↻-Knopf **2 Sekunden gedrückt halten**, Schlüssel einfügen, **Speichern**.
+
+Der Schlüssel liegt nur im Speicher dieses Geräts, nicht auf der Seite. Er darf nur Aktualisierungen starten, keinen Code ändern. Auf dem iPhone haben Safari und das Symbol auf dem Homebildschirm getrennte Speicher: den Schlüssel dort eingeben, wo die App benutzt wird. Läuft der Schlüssel ab, meldet die App „Schlüssel ungültig“.
+
 ## Wenn chev.lu umgebaut wird
 Das Skript prüft bei jedem Lauf, ob die Seiten noch wie erwartet aussehen. Als Störung gilt:
 - eine Team-Seite ist nicht erreichbar,

@@ -10,6 +10,10 @@ on:
 permissions:
   contents: write           # nötig, damit die Action data.json speichern darf
 
+concurrency:                # läuft schon eine Aktualisierung, wartet die nächste
+  group: spielplan
+  cancel-in-progress: false
+
 jobs:
   update:
     runs-on: ubuntu-latest
@@ -37,6 +41,7 @@ jobs:
           git config user.email "actions@users.noreply.github.com"
           git add data.json
           git diff --cached --quiet || git commit -m "Spielplan aktualisiert"
+          git pull --rebase -q || true
           git push
 
       - name: Störung melden
