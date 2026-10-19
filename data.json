@@ -1,31 +1,6 @@
 {
- "stand": "2026-10-19T06:16",
- "fehler": [
-  "h1: keine Spieltabelle gefunden",
-  "d1: keine Spieltabelle gefunden",
-  "h2: keine Spieltabelle gefunden",
-  "d2: keine Spieltabelle gefunden",
-  "u17g: keine Spieltabelle gefunden",
-  "u17f: keine Spieltabelle gefunden",
-  "u15g: keine Spieltabelle gefunden",
-  "u13g: keine Spieltabelle gefunden",
-  "u13m: keine Spieltabelle gefunden",
-  "u11: keine Spieltabelle gefunden",
-  "u9: keine Spieltabelle gefunden",
-  "h1 Tabelle: Tabellenstand nicht mehr gefunden",
-  "h1 Ergebnisse: keine Ergebnisse mehr gefunden",
-  "d1 Tabelle: Tabellenstand nicht mehr gefunden",
-  "d1 Ergebnisse: keine Ergebnisse mehr gefunden",
-  "h2 Tabelle: Tabellenstand nicht mehr gefunden",
-  "h2 Ergebnisse: keine Ergebnisse mehr gefunden",
-  "d2 Tabelle: Tabellenstand nicht mehr gefunden",
-  "d2 Ergebnisse: keine Ergebnisse mehr gefunden",
-  "u17g Ergebnisse: keine Ergebnisse mehr gefunden",
-  "u17f Ergebnisse: keine Ergebnisse mehr gefunden",
-  "u15g Ergebnisse: keine Ergebnisse mehr gefunden",
-  "u13g Ergebnisse: keine Ergebnisse mehr gefunden",
-  "u13m Ergebnisse: keine Ergebnisse mehr gefunden"
- ],
+ "stand": "2026-10-19T06:19",
+ "fehler": [],
  "spiele": [
   [
    "h1",
