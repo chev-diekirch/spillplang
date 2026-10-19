@@ -1,10 +1,13 @@
-# Holt jeden Morgen die Spielpläne von chev.lu und speichert sie in data.json.
+# Holt viermal am Tag die Spielpläne von chev.lu und speichert sie in data.json.
 # Startet auch per Hand: Reiter "Actions" -> "Spielplan aktualisieren" -> "Run workflow".
 name: Spielplan aktualisieren
 
 on:
   schedule:
-    - cron: "45 3 * * *"   # täglich 03:45 UTC = 05:45 Sommerzeit / 04:45 Winterzeit in Luxemburg
+    # Zeiten in UTC: 04:15, 10:15, 16:15, 20:15
+    # = 06:15, 12:15, 18:15, 22:15 Sommerzeit / 05:15, 11:15, 17:15, 21:15 Winterzeit in Luxemburg.
+    # Mehrere Läufe, weil chev.lu manchmal kurz eine Sicherheitsprüfung statt der Seite zeigt.
+    - cron: "15 4,10,16,20 * * *"
   workflow_dispatch:        # erlaubt den Start per Knopfdruck
 
 permissions:
@@ -31,7 +34,7 @@ jobs:
 
       - name: chev.lu auslesen
         id: scrape
-        # chev.lu ist morgens manchmal kurz nicht erreichbar (Wartung?).
+        # chev.lu zeigt manchmal kurz eine Sicherheitsprüfung statt der Seite.
         # Deshalb bis zu 3 Versuche: sofort, nach 5 und nach weiteren 10 Minuten.
         # Klappt keiner, merken wir uns das, speichern aber trotzdem, was funktioniert hat.
         # Der Fehler wird im letzten Schritt gemeldet (-> E-Mail).
@@ -53,6 +56,18 @@ jobs:
 
       - name: Störung melden
         if: steps.scrape.outputs.fehler == '1'
+        # Ein einzelner gestörter Lauf ist kein Problem, der nächste holt es nach.
+        # Rot (-> E-Mail) wird es erst, wenn seit über 24 Stunden kein Lauf geklappt hat.
         run: |
-          echo "::error::Aktualisierung gestört – chev.lu evtl. umgebaut. Details im Schritt 'chev.lu auslesen'."
-          exit 1
+          python - <<'PY'
+          import json, sys
+          from datetime import datetime, timedelta
+          d = json.load(open("data.json", encoding="utf-8"))
+          ok = d.get("letzter_erfolg")
+          alter = datetime.fromisoformat(d["stand"]) - datetime.fromisoformat(ok) if ok else None
+          if alter is not None and alter < timedelta(hours=24):
+              print(f"::warning::Lauf gestört, letzte erfolgreiche Aktualisierung {ok} – noch keine Meldung.")
+              sys.exit(0)
+          print(f"::error::Seit über 24 Stunden keine erfolgreiche Aktualisierung (zuletzt {ok}). Details im Schritt 'chev.lu auslesen'.")
+          sys.exit(1)
+          PY

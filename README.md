@@ -21,7 +21,7 @@ Quelle sind die Team-Seiten auf chev.lu (`https://chev.lu/match/<mannschaft>/`),
 Die Ergebnis-Seiten haben kein Datum. Das Skript ordnet jedes Ergebnis deshalb dem frühesten passenden Spiel im Spielplan zu (gleiches Heim- und Gastteam, Pokal nur zu Pokal). Kleine Schreibfehler bei Gegnern werden dabei toleriert. Es steht also nur drin, was der Verein dort veröffentlicht – aktuell meist die Hinrunde, U7 hat keinen Spielplan.
 
 Ablauf:
-1. Die GitHub Action **Spielplan aktualisieren** startet jeden Morgen (05:45 Sommerzeit / 04:45 Winterzeit; GitHub startet oft ein paar Minuten später).
+1. Die GitHub Action **Spielplan aktualisieren** startet viermal am Tag: 06:15, 12:15, 18:15 und 22:15 (Sommerzeit; im Winter eine Stunde früher). GitHub startet oft ein paar Minuten später.
 2. Sie führt `scrape.py` aus: das Skript lädt die 12 Team-Seiten, liest die Tabellen aus und schreibt alle Termine in `data.json`.
 3. `data.json` wird gespeichert („Spielplan aktualisiert“ in der Commit-Liste). Das passiert jeden Tag, weil sich mindestens der Stand ändert.
 4. Die Seite (`index.html`) lädt beim Öffnen `data.json` und zeigt den Stand oben im Kopf an.
@@ -47,7 +47,7 @@ Das Skript prüft bei jedem Lauf, ob die Seiten noch wie erwartet aussehen. Als 
 - die Tabelle hat andere Spalten oder ein anderes Datumsformat,
 - in einer Zeile kommt kein CHEV-Team vor.
 
-chev.lu ist morgens manchmal für ein paar Minuten nicht erreichbar. Deshalb versucht es die Action bis zu dreimal (sofort, nach 5 und nach weiteren 10 Minuten). Erst wenn alle drei Versuche scheitern, gilt es als Störung.
+chev.lu zeigt manchmal für eine Weile eine Sicherheitsprüfung („One moment, please…“) statt der Seite. Deshalb versucht es jeder Lauf bis zu dreimal (sofort, nach 5 und nach weiteren 10 Minuten), und es gibt vier Läufe am Tag. Ein einzelner gestörter Lauf wird nur als Warnung (gelb) vermerkt. Erst wenn seit über 24 Stunden keine Aktualisierung geklappt hat (`letzter_erfolg` in `data.json`), gilt es als Störung.
 
 Dann behält die betroffene Mannschaft ihre alten Termine, der Lauf wird **rot** und GitHub schickt eine E-Mail. Auf der Seite steht hinter dem Datum „(teilweise veraltet)“. Welche Mannschaft betroffen ist und warum, steht im Lauf unter dem Schritt **chev.lu auslesen**. Was chev.lu statt der Tabelle geschickt hat, steht außerdem in `data.json` unter `diagnose`.
 

@@ -365,8 +365,13 @@ def main():
         print(f"{team:5} {len(zuordnung):3} Ergebnisse zugeordnet"
               + (f", nicht zugeordnet: {'; '.join(offen)}" if offen else ""))
 
+    # Zeitpunkt der letzten Aktualisierung ohne jede Störung merken.
+    # Der Workflow meldet sich erst, wenn das länger als 24 Stunden her ist.
+    letzter_erfolg = jetzt if not fehler else alt.get("letzter_erfolg")
+
     with open("data.json", "w", encoding="utf-8") as f:
-        json.dump({"stand": jetzt, "fehler": fehler, "spiele": neue_zeilen,
+        json.dump({"stand": jetzt, "fehler": fehler, "letzter_erfolg": letzter_erfolg,
+                   "spiele": neue_zeilen,
                    "aenderungen": aenderungen, "resultate": resultate, "tabellen": tabellen,
                    "diagnose": diagnose[:3]},
                   f, ensure_ascii=False, indent=1)
@@ -375,7 +380,7 @@ def main():
         print("\nSTÖRUNG – chev.lu evtl. umgebaut. Betroffen:")
         for f_ in fehler:
             print(" -", f_)
-        sys.exit(1)   # lässt den GitHub-Lauf fehlschlagen -> E-Mail
+        sys.exit(1)   # Workflow versucht es nochmal; E-Mail erst nach 24 h ohne Erfolg
 
 
 if __name__ == "__main__":
