@@ -298,6 +298,7 @@ def main():
     alte_aenderungen = alt.get("aenderungen", {})
 
     neue_zeilen, fehler, aenderungen = [], [], {}
+    diagnose = []   # was chev.lu bei Störungen geschickt hat (landet in data.json)
     for team, pfad in TEAMS.items():
         alte_team_zeilen = [z for z in alt["spiele"] if z[0] == team]
         try:
@@ -313,6 +314,8 @@ def main():
                 print(f"   {team}: HTTP {antwort.status_code}, {len(antwort.text)} Zeichen, "
                       f"Adresse {antwort.url}, Titel '{titel}'")
                 print(f"   {team}: Textanfang: {anfang}")
+                diagnose.append({"team": team, "http": antwort.status_code, "zeichen": len(antwort.text),
+                                 "adresse": antwort.url, "titel": titel, "anfang": anfang})
         except requests.RequestException as e:
             zeilen, probleme = [], [f"Seite nicht erreichbar: {e}"]
 
@@ -364,7 +367,8 @@ def main():
 
     with open("data.json", "w", encoding="utf-8") as f:
         json.dump({"stand": jetzt, "fehler": fehler, "spiele": neue_zeilen,
-                   "aenderungen": aenderungen, "resultate": resultate, "tabellen": tabellen},
+                   "aenderungen": aenderungen, "resultate": resultate, "tabellen": tabellen,
+                   "diagnose": diagnose[:3]},
                   f, ensure_ascii=False, indent=1)
 
     if fehler:

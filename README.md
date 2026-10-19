@@ -47,7 +47,9 @@ Das Skript prüft bei jedem Lauf, ob die Seiten noch wie erwartet aussehen. Als 
 - die Tabelle hat andere Spalten oder ein anderes Datumsformat,
 - in einer Zeile kommt kein CHEV-Team vor.
 
-Dann behält die betroffene Mannschaft ihre alten Termine, der Lauf wird **rot** und GitHub schickt eine E-Mail. Auf der Seite steht hinter dem Datum „(teilweise veraltet)“. Welche Mannschaft betroffen ist und warum, steht im Lauf unter dem Schritt **chev.lu auslesen**.
+chev.lu ist morgens manchmal für ein paar Minuten nicht erreichbar. Deshalb versucht es die Action bis zu dreimal (sofort, nach 5 und nach weiteren 10 Minuten). Erst wenn alle drei Versuche scheitern, gilt es als Störung.
+
+Dann behält die betroffene Mannschaft ihre alten Termine, der Lauf wird **rot** und GitHub schickt eine E-Mail. Auf der Seite steht hinter dem Datum „(teilweise veraltet)“. Welche Mannschaft betroffen ist und warum, steht im Lauf unter dem Schritt **chev.lu auslesen**. Was chev.lu statt der Tabelle geschickt hat, steht außerdem in `data.json` unter `diagnose`.
 
 ## Dateien
 | Datei | Was sie macht |

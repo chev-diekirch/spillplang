@@ -31,9 +31,16 @@ jobs:
 
       - name: chev.lu auslesen
         id: scrape
-        # Schlägt das Skript fehl, merken wir uns das, speichern aber trotzdem,
-        # was funktioniert hat. Der Fehler wird im letzten Schritt gemeldet.
-        run: python scrape.py || echo "fehler=1" >> "$GITHUB_OUTPUT"
+        # chev.lu ist morgens manchmal kurz nicht erreichbar (Wartung?).
+        # Deshalb bis zu 3 Versuche: sofort, nach 5 und nach weiteren 10 Minuten.
+        # Klappt keiner, merken wir uns das, speichern aber trotzdem, was funktioniert hat.
+        # Der Fehler wird im letzten Schritt gemeldet (-> E-Mail).
+        run: |
+          python scrape.py && exit 0
+          echo "Versuch 1 gestört, neuer Versuch in 5 Minuten"; sleep 300
+          python scrape.py && exit 0
+          echo "Versuch 2 gestört, neuer Versuch in 10 Minuten"; sleep 600
+          python scrape.py || echo "fehler=1" >> "$GITHUB_OUTPUT"
 
       - name: data.json speichern
         run: |
