@@ -1,6 +1,31 @@
 {
- "stand": "2026-10-22T12:45",
- "fehler": [],
+ "stand": "2026-10-22T19:02",
+ "fehler": [
+  "h1: keine Spieltabelle gefunden",
+  "d1: keine Spieltabelle gefunden",
+  "h2: keine Spieltabelle gefunden",
+  "d2: keine Spieltabelle gefunden",
+  "u17g: keine Spieltabelle gefunden",
+  "u17f: keine Spieltabelle gefunden",
+  "u15g: keine Spieltabelle gefunden",
+  "u13g: keine Spieltabelle gefunden",
+  "u13m: keine Spieltabelle gefunden",
+  "u11: keine Spieltabelle gefunden",
+  "u9: keine Spieltabelle gefunden",
+  "h1 Tabelle: Tabellenstand nicht mehr gefunden",
+  "h1 Ergebnisse: keine Ergebnisse mehr gefunden",
+  "d1 Tabelle: Tabellenstand nicht mehr gefunden",
+  "d1 Ergebnisse: keine Ergebnisse mehr gefunden",
+  "h2 Tabelle: Tabellenstand nicht mehr gefunden",
+  "h2 Ergebnisse: keine Ergebnisse mehr gefunden",
+  "d2 Tabelle: Tabellenstand nicht mehr gefunden",
+  "d2 Ergebnisse: keine Ergebnisse mehr gefunden",
+  "u17g Ergebnisse: keine Ergebnisse mehr gefunden",
+  "u17f Ergebnisse: keine Ergebnisse mehr gefunden",
+  "u15g Ergebnisse: keine Ergebnisse mehr gefunden",
+  "u13g Ergebnisse: keine Ergebnisse mehr gefunden",
+  "u13m Ergebnisse: keine Ergebnisse mehr gefunden"
+ ],
  "letzter_erfolg": "2026-10-22T12:45",
  "spiele": [
   [
@@ -1312,5 +1337,30 @@
    ]
   }
  },
- "diagnose": []
+ "diagnose": [
+  {
+   "team": "h1",
+   "http": 200,
+   "zeichen": 11941,
+   "adresse": "https://chev.lu/match/hommes-1/",
+   "titel": "One moment, please...",
+   "anfang": "One moment, please... Loader Please wait while your request is being verified..."
+  },
+  {
+   "team": "d1",
+   "http": 200,
+   "zeichen": 11977,
+   "adresse": "https://chev.lu/match/dames-1/",
+   "titel": "One moment, please...",
+   "anfang": "One moment, please... Loader Please wait while your request is being verified..."
+  },
+  {
+   "team": "h2",
+   "http": 200,
+   "zeichen": 12031,
+   "adresse": "https://chev.lu/match/hommes-2/",
+   "titel": "One moment, please...",
+   "anfang": "One moment, please... Loader Please wait while your request is being verified..."
+  }
+ ]
 }
