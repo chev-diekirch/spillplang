@@ -1,6 +1,8 @@
 {
- "stand": "2026-10-30T17:57",
- "fehler": [],
+ "stand": "2026-10-30T22:09",
+ "fehler": [
+  "u17g: unbekanntes Datum 'Mosel/Ruwer' in Zeile 5"
+ ],
  "letzter_erfolg": "2026-10-30T17:57",
  "spiele": [
   [
@@ -309,18 +311,18 @@
   ],
   [
    "d2",
-   "29705006",
-   "",
-   "",
-   "CHEV",
-   "Käerjeng 2"
-  ],
-  [
-   "d2",
    "29705007",
    "15.11.26",
    "18:00",
    "Dudelange 2",
+   "CHEV"
+  ],
+  [
+   "d2",
+   "29705006",
+   "22.11.26",
+   "17:00",
+   "Käerjeng 2",
    "CHEV"
   ],
   [
@@ -335,9 +337,9 @@
    "d2",
    "29705012",
    "05.12.26",
-   "18:00",
-   "Käerjeng 2",
-   "CHEV"
+   "18:30",
+   "CHEV",
+   "Käerjeng 2"
   ],
   [
    "u17g",
@@ -936,12 +938,21 @@
    ]
   },
   "d2|29705006": {
-   "am": "2026-10-16T22:39",
+   "am": "2026-10-30T21:52",
    "vorher": [
-    "25.10.26",
-    "17:30",
+    "",
+    "",
     "CHEV",
     "Käerjeng 2"
+   ]
+  },
+  "d2|29705012": {
+   "am": "2026-10-30T21:52",
+   "vorher": [
+    "05.12.26",
+    "18:00",
+    "Käerjeng 2",
+    "CHEV"
    ]
   },
   "u17f|4": {
@@ -1331,5 +1342,14 @@
    ]
   }
  },
- "diagnose": []
+ "diagnose": [
+  {
+   "team": "u17g",
+   "http": 200,
+   "zeichen": 131300,
+   "adresse": "https://chev.lu/match/u17-garcons/",
+   "titel": "U17 Garçons - CHEV Handball Diekirch",
+   "anfang": "U17 Garçons - CHEV Handball Diekirch Home Fan-Shop ASPORT – CHEV Collection RE-FILL – CHEV Bottles Le club Comité Palmarès Hall sportif News Handballzeitung Archiv Training Équipes Hommes 1 Dames 1 Ho"
+  }
+ ]
 }
