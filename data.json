@@ -1,9 +1,7 @@
 {
- "stand": "2026-11-08T00:57",
- "fehler": [
-  "u17g: unbekanntes Datum 'Mosel/Ruwer' in Zeile 5"
- ],
- "letzter_erfolg": "2026-10-30T17:57",
+ "stand": "2026-11-08T08:13",
+ "fehler": [],
+ "letzter_erfolg": "2026-11-08T08:13",
  "spiele": [
   [
    "h1",
@@ -375,17 +373,9 @@
   ],
   [
    "u17g",
-   "5",
-   "08.11.26",
-   "17:15",
-   "JSG Mosel/Ruwer",
-   "CHEV"
-  ],
-  [
-   "u17g",
    "6",
-   "14.11.26",
-   "14:15",
+   "15.11.26",
+   "15:00",
    "HSG Obere Nahe",
    "CHEV"
   ],
@@ -955,6 +945,15 @@
     "CHEV"
    ]
   },
+  "u17g|6": {
+   "am": "2026-11-08T08:13",
+   "vorher": [
+    "14.11.26",
+    "14:15",
+    "HSG Obere Nahe",
+    "CHEV"
+   ]
+  },
   "u17f|4": {
    "am": "2026-10-28T18:00",
    "vorher": [
@@ -1338,14 +1337,5 @@
    ]
   }
  },
- "diagnose": [
-  {
-   "team": "u17g",
-   "http": 200,
-   "zeichen": 131225,
-   "adresse": "https://chev.lu/match/u17-garcons/",
-   "titel": "U17 Garçons - CHEV Handball Diekirch",
-   "anfang": "U17 Garçons - CHEV Handball Diekirch Home Fan-Shop ASPORT – CHEV Collection RE-FILL – CHEV Bottles Le club Comité Palmarès Hall sportif News Handballzeitung Archiv Training Équipes Hommes 1 Dames 1 Ho"
-  }
- ]
+ "diagnose": []
 }
