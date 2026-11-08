@@ -133,7 +133,11 @@ def team_auswerten(team, html):
         if team in TURNIER_TEAMS and nummer == 1:
             print(f"   {team} Spalten: {idx['kopf']} | erste Zeile: {z}")
         heim, gast = feld("heim"), feld("gast")
-
+        # Zurückgezogene Spiele ("retiré"/"retirée"): finden nicht statt -> weglassen
+        if "retiré" in " ".join(z).lower():
+            print(f"   {team}: Zeile {nummer} zurückgezogen, übersprungen: {z}")
+            continue
+               
         # Verlegte Spiele: auf chev.lu steht dann "remis" statt Datum
         if "remis" in " ".join(z).lower():
             datum, zeit = "", ""
